@@ -1,4 +1,4 @@
-package twitter.nifi.solr;
+package org.apache.nifi.processors.twitter;
 
 import org.apache.nifi.components.PropertyDescriptor;
 import org.apache.nifi.processor.*;

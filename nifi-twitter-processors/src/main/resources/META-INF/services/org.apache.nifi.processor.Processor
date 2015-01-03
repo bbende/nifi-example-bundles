@@ -1,1 +1,1 @@
-twitter.nifi.solr.SearchTwitter
+org.apache.nifi.processors.twitter.SearchTwitter

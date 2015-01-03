@@ -1,4 +1,4 @@
-package twitter.nifi.solr;
+package org.apache.nifi.processors.twitter;
 
 /**
  * @author bryanbende
