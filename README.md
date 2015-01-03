@@ -1,4 +1,4 @@
-twitter-nifi-solr
+nifi-twitter-bundle
 =================
 
-Example application that uses Apache NiFi to search the twitter API and ingest relevant Tweets to Solr
+Example application that uses Apache NiFi to search the twitter API.
