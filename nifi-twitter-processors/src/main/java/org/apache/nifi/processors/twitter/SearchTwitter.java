@@ -12,7 +12,6 @@ import org.springframework.social.twitter.api.Tweet;
 import org.springframework.social.twitter.api.Twitter;
 import org.springframework.social.twitter.api.impl.TwitterTemplate;
 
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
