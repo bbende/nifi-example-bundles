@@ -14,8 +14,6 @@
     <version>0.0.1-SNAPSHOT</version>
     <packaging>nar</packaging>
 
-    <name>NiFi Twitter NAR</name>
-
     <dependencies>
         <dependency>
             <groupId>nifi-twitter</groupId>
