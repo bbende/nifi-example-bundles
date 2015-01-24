@@ -4,19 +4,23 @@
 
     <parent>
         <groupId>org.apache.nifi</groupId>
-        <artifactId>nifi-nar-bundles</artifactId>
-        <version>0.0.1-incubating-SNAPSHOT</version>
+        <artifactId>nifi-example-bundles</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
     </parent>
 
-    <groupId>org.apache.nifi</groupId>
-    <artifactId>nifi-example-bundles</artifactId>
+    <groupId>nifi-twitter</groupId>
+    <artifactId>nifi-twitter-bundle</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
-    <name>NiFi Examples</name>
+    <name>NiFi Twitter Bundle</name>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
 
     <modules>
-        <module>nifi-twitter-bundle</module>
+        <module>nifi-twitter-processors</module>
+        <module>nifi-twitter-nar</module>
     </modules>
-
 </project>

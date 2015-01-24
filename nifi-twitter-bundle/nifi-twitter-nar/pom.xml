@@ -7,11 +7,11 @@
     <parent>
         <groupId>nifi-twitter</groupId>
         <artifactId>nifi-twitter-bundle</artifactId>
-        <version>0.1-SNAPSHOT</version>
+        <version>0.0.1-SNAPSHOT</version>
     </parent>
 
     <artifactId>nifi-twitter-nar</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>0.0.1-SNAPSHOT</version>
     <packaging>nar</packaging>
 
     <name>NiFi Twitter NAR</name>
@@ -20,7 +20,7 @@
         <dependency>
             <groupId>nifi-twitter</groupId>
             <artifactId>nifi-twitter-processors</artifactId>
-            <version>0.1-SNAPSHOT</version>
+            <version>0.0.1-SNAPSHOT</version>
         </dependency>
     </dependencies>
 

@@ -1,4 +1,8 @@
-nifi-twitter-bundle
+nifi-example-bundles
 =================
 
-Example application that uses Apache NiFi to search the twitter API.
+Example processor bundles for Apache NiFi.
+
+#### nifi-twitter-bundle
+
+GetTwitterSearch - Processor for calling the Twitter search API.
