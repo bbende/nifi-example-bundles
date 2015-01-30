@@ -18,19 +18,14 @@
 
     <parent>
         <groupId>org.apache.nifi</groupId>
-        <artifactId>nifi-solr-bundle</artifactId>
+        <artifactId>nifi-example-utils-bundle</artifactId>
         <version>0.0.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>nifi-solr-processors</artifactId>
+    <artifactId>nifi-example-utils-processors</artifactId>
     <packaging>jar</packaging>
 
     <dependencies>
-        <dependency>
-            <groupId>org.apache.solr</groupId>
-            <artifactId>solr-solrj</artifactId>
-            <version>4.10.3</version>
-        </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
