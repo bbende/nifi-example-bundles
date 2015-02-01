@@ -161,4 +161,24 @@ public class RenameJSONFieldsTest {
         flowFile.assertContentEquals(expectedJson);
     }
 
+    @Test
+    public void testInvalidJson() throws IOException {
+        final String inputJson = "{field:,, }";
+
+        final String fieldMappings = "field1=fieldA,field3=fieldB";
+        final String excludeFields = "field1,field3";
+
+        testRunner.setProperty(RenameJSONFields.FIELD_MAPPINGS, fieldMappings);
+        testRunner.setProperty(RenameJSONFields.EXCLUDE_FIELDS, excludeFields);
+
+        testRunner.enqueue(inputJson.getBytes("UTF-8"));
+        testRunner.run();
+
+        testRunner.assertAllFlowFilesTransferred(RenameJSONFields.REL_FAILURE, 1);
+
+        List<MockFlowFile> flowFiles = testRunner.getFlowFilesForRelationship(
+                RenameJSONFields.REL_FAILURE);
+        Assert.assertEquals(1, flowFiles.size());
+    }
+
 }

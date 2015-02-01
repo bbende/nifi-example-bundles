@@ -16,10 +16,7 @@
  */
 package org.apache.nifi.processors.example.utils;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.*;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.annotation.lifecycle.OnScheduled;
@@ -29,6 +26,7 @@ import org.apache.nifi.processor.*;
 import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.io.StreamCallback;
 import org.apache.nifi.processor.util.StandardValidators;
+import org.apache.nifi.util.ObjectHolder;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -131,12 +129,17 @@ public class RenameJSONFields extends AbstractProcessor {
             return;
         }
 
-        try {
-            flowFile = session.write(flowFile, new RenameJSONFieldsStreamCallback());
-            session.transfer(flowFile, REL_SUCCESS);
-        } catch (Exception e) {
-            getLogger().error("Error processing JSON", e);
+        RenameJSONFieldsStreamCallback streamCallback = new RenameJSONFieldsStreamCallback();
+        flowFile = session.write(flowFile, streamCallback);
+
+        if (streamCallback.getError() != null) {
+            getLogger().error("Failed processing JSON for {}; routing to 'failure'",
+                    new Object[]{flowFile}, streamCallback.getError());
             session.transfer(flowFile, REL_FAILURE);
+        } else {
+            getLogger().info("Successfully processed JSON for {}; routing to 'success'",
+                    new Object[]{flowFile});
+            session.transfer(flowFile, REL_SUCCESS);
         }
     }
 
@@ -144,6 +147,8 @@ public class RenameJSONFields extends AbstractProcessor {
      * StreamingCallback that processes JSON and renames fields.
      */
     private class RenameJSONFieldsStreamCallback implements StreamCallback {
+
+        private final ObjectHolder<Exception> error = new ObjectHolder<>(null);
 
         @Override
         public void process(final InputStream in, final OutputStream out) throws IOException {
@@ -202,6 +207,8 @@ public class RenameJSONFields extends AbstractProcessor {
                             break;
                     }
                 }
+            } catch (JsonParseException | JsonGenerationException e) {
+                error.set(e);
             } finally {
                 try {
                     jParser.close();
@@ -212,6 +219,10 @@ public class RenameJSONFields extends AbstractProcessor {
                 } catch (Exception e) {
                 }
             }
+        }
+
+        public Exception getError() {
+            return error.get();
         }
     }
 
