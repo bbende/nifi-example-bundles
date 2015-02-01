@@ -52,7 +52,7 @@ public class PutSolrTest {
         testRunner.run();
 
         testRunner.assertAllFlowFilesTransferred(PutSolr.REL_FAILURE, 0);
-        testRunner.assertAllFlowFilesTransferred(PutSolr.REL_CONNECTION_ERROR, 0);
+        testRunner.assertAllFlowFilesTransferred(PutSolr.REL_COMM_FAILURE, 0);
 
         verify(proc.getMockSolrServer(), times(1)).add(any(SolrInputDocument.class));
     }

@@ -85,12 +85,12 @@ public class PutSolr extends AbstractProcessor {
 
     public static final Relationship REL_FAILURE = new Relationship.Builder()
             .name("failure")
-            .description("Relationship to use when a failure to add documents to Solr occurs.")
+            .description("Failure to process due to some kind of error.")
             .build();
 
-    public static final Relationship REL_CONNECTION_ERROR = new Relationship.Builder()
-            .name("connection_error")
-            .description("Relationship to use when an error connecting to Solr occurs.")
+    public static final Relationship REL_COMM_FAILURE = new Relationship.Builder()
+            .name("communication failure")
+            .description("Failure to process due to an error connecting to Solr.")
             .build();
 
     private List<PropertyDescriptor> descriptors;
@@ -110,7 +110,7 @@ public class PutSolr extends AbstractProcessor {
 
         final Set<Relationship> relationships = new HashSet<Relationship>();
         relationships.add(REL_FAILURE);
-        relationships.add(REL_CONNECTION_ERROR);
+        relationships.add(REL_COMM_FAILURE);
         this.relationships = Collections.unmodifiableSet(relationships);
     }
 
@@ -190,7 +190,7 @@ public class PutSolr extends AbstractProcessor {
             session.remove(flowFile);
         } catch (SolrServerException e) {
             getLogger().error("Error adding documents to Solr", e);
-            session.transfer(flowFile, REL_CONNECTION_ERROR);
+            session.transfer(flowFile, REL_COMM_FAILURE);
         } catch (Exception e) {
             getLogger().error("Error processing FlowFile", e);
             session.transfer(flowFile, REL_FAILURE);

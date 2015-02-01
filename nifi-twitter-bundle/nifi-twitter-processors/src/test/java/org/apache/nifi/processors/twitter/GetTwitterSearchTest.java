@@ -47,7 +47,7 @@ public class GetTwitterSearchTest {
         runner.run(2);
 
         final List<MockFlowFile> flowFiles = runner.getFlowFilesForRelationship(
-                GetTwitterSearch.RESULTS);
+                GetTwitterSearch.SUCCESS);
 
         Assert.assertEquals(2 * tweets.size(), flowFiles.size());
 

@@ -63,9 +63,9 @@ public class GetTwitterSearch extends AbstractProcessor {
             .defaultValue("100")
             .build();
 
-    public static final Relationship RESULTS = new Relationship.Builder()
-            .name("results")
-            .description("The response from the Twitter API for the given query")
+    public static final Relationship SUCCESS = new Relationship.Builder()
+            .name("success")
+            .description("An individual tweet in JSON format.")
             .build();
 
 
@@ -87,7 +87,7 @@ public class GetTwitterSearch extends AbstractProcessor {
         this.descriptors = Collections.unmodifiableList(descriptors);
 
         final Set<Relationship> relationships = new HashSet<>();
-        relationships.add(RESULTS);
+        relationships.add(SUCCESS);
         this.relationships = Collections.unmodifiableSet(relationships);
     }
 
@@ -165,18 +165,15 @@ public class GetTwitterSearch extends AbstractProcessor {
         long lastId = 0;
 
         for (final Tweet tweet : results.getTweets()) {
-            try {
-                FlowFile flowFile = session.create();
-                flowFile = session.write(flowFile, new OutputStreamCallback() {
-                    @Override
-                    public void process(final OutputStream out) throws IOException {
-                        mapper.writeValue(out, tweet);
-                    }
-                });
-                session.transfer(flowFile, RESULTS);
-            } catch (Exception e) {
-                getLogger().error("Error processing Tweet: " + tweet.getId(), e);
-            }
+            FlowFile flowFile = session.create();
+            flowFile = session.write(flowFile, new OutputStreamCallback() {
+                @Override
+                public void process(final OutputStream out) throws IOException {
+                    mapper.writeValue(out, tweet);
+                }
+            });
+
+            session.transfer(flowFile, SUCCESS);
             lastId = tweet.getId();
         }
 
