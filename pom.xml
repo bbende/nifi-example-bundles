@@ -13,6 +13,10 @@
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
+    <properties>
+        <nifiVersion>0.0.2-incubating-SNAPSHOT</nifiVersion>
+    </properties>
+
     <modules>
         <module>nifi-twitter-bundle</module>
         <module>nifi-solr-bundle</module>
