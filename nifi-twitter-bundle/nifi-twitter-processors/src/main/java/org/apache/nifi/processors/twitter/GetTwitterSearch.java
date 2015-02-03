@@ -68,6 +68,7 @@ public class GetTwitterSearch extends AbstractProcessor {
             .description("An individual tweet in JSON format.")
             .build();
 
+    public static final String TWITTER_SEARCH_URI = "https://api.twitter.com/1.1/search/tweets.json";
 
     private List<PropertyDescriptor> descriptors;
     private Set<Relationship> relationships;
@@ -146,11 +147,15 @@ public class GetTwitterSearch extends AbstractProcessor {
                 // keep track of where we should pick up next time
                 prevMaxId = results.getSearchMetadata().getMaxId();
             }
+
+            getLogger().info("Picking up at " + prevMaxId + " next time...");
+
+        } catch (Exception e) {
+            context.yield();
+            getLogger().debug("Failed to search Twitter due to {}", new Object[] {e.getMessage()},  e);
         } finally {
             searchLock.unlock();
         }
-
-        getLogger().info("Picking up at " + prevMaxId + " next time...");
     }
 
     /**
@@ -174,6 +179,7 @@ public class GetTwitterSearch extends AbstractProcessor {
             });
 
             session.transfer(flowFile, SUCCESS);
+            session.getProvenanceReporter().receive(flowFile, TWITTER_SEARCH_URI);
             lastId = tweet.getId();
         }
 

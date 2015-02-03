@@ -140,6 +140,7 @@ public class RenameJSONFields extends AbstractProcessor {
             getLogger().info("Successfully processed JSON for {}; routing to 'success'",
                     new Object[]{flowFile});
             session.transfer(flowFile, REL_SUCCESS);
+            session.getProvenanceReporter().modifyContent(flowFile);
         }
     }
 
