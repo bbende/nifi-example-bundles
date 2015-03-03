@@ -50,16 +50,18 @@ public class EmbeddedSolrServerFactory {
      */
     public static SolrServer create(String solrHome, String coreHome, String coreName, String dataDir)
             throws IOException {
-        File coreDataDir = new File(dataDir + "/" + coreName);
-        if (coreDataDir.exists()) {
-            FileUtils.deleteDirectory(coreDataDir);
+
+        Properties props = new Properties();
+        if (dataDir != null) {
+            File coreDataDir = new File(dataDir + "/" + coreName);
+            if (coreDataDir.exists()) {
+                FileUtils.deleteDirectory(coreDataDir);
+            }
+            props.setProperty("dataDir", dataDir + "/" + coreName);
         }
 
         CoreContainer coreContainer = new CoreContainer(solrHome);
         coreContainer.load();
-
-        Properties props = new Properties();
-        props.setProperty("dataDir", dataDir + "/" + coreName);
 
         CoreDescriptor descriptor = new CoreDescriptor(coreContainer, coreName,
                 new File(coreHome, coreName).getAbsolutePath(), props);

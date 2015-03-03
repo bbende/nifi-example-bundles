@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<schema version="1.5" name="jsonCollection">
+<schema version="1.5" name="testCollection">
 
     <fieldType name="string" class="solr.StrField"/>
     <fieldType name="date" class="solr.TrieDateField" precisionStep="0" positionIncrementGap="0"/>

@@ -178,7 +178,11 @@ public class PutSolrContentStream extends BinFiles {
      */
     protected MultiMapSolrParams createRequestParams(final ProcessContext context) {
         final Map<String,String[]> paramsMap = new HashMap<>();
+
         final String requestParamsVal = context.getProperty(REQUEST_PARAMS).getValue();
+        if (requestParamsVal == null || requestParamsVal.trim().isEmpty()) {
+            return new MultiMapSolrParams(paramsMap);
+        }
 
         final String[] params = requestParamsVal.split("[&]");
         if (params == null || params.length == 0) {
@@ -257,7 +261,7 @@ public class PutSolrContentStream extends BinFiles {
             }
         }
 
-        final ObjectHolder<String> collectionHolder = new ObjectHolder<String>(null);
+        final ObjectHolder<String> collectionHolder = new ObjectHolder<>(null);
         final boolean isSolrCloud = SOLR_TYPE_CLOUD.equals(context.getProperty(SOLR_TYPE).getValue());
 
         // create a ContentStream for each FlowFile...
