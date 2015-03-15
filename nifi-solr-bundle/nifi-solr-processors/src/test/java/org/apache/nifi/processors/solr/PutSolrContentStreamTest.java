@@ -25,13 +25,13 @@ import org.apache.solr.client.solrj.SolrServer;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocument;
+import org.apache.solr.common.SolrException;
 import org.apache.solr.common.util.NamedList;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -62,33 +62,25 @@ public class PutSolrContentStreamTest {
     }
 
     @Test
-    public void testEmbeddedSolrServerSimpleJsonUpdate() throws IOException, SolrServerException {
+    public void testSimpleJsonUpdateWithEmbeddedSolrServer() throws IOException, SolrServerException {
         final EmbeddedSolrServerProcessor proc = new EmbeddedSolrServerProcessor(DEFAULT_SOLR_CORE);
 
-        final TestRunner runner = createDefaultJsonTestRunner(proc);
-        runner.setProperty(PutSolrContentStream.MAX_ENTRIES, "2");
-        runner.setProperty(PutSolrContentStream.MAX_BIN_AGE, "5 seconds");
-
-        runner.enqueue(TEST_JSON1.getBytes("UTF-8"));
-        runner.enqueue(TEST_JSON2.getBytes("UTF-8"));
-
         try {
+            final TestRunner runner = createDefaultJsonTestRunner(proc);
+            runner.enqueue(TEST_JSON1.getBytes("UTF-8"));
+
             // first run an verify there are no failures
             runner.run();
-            runner.assertAllFlowFilesTransferred(PutSolrContentStream.REL_FAILURE, 0);
+            runner.assertTransferCount(PutSolrContentStream.REL_FAILURE, 0);
+            runner.assertTransferCount(PutSolrContentStream.REL_CONNECTION_FAILURE, 0);
+            runner.assertTransferCount(PutSolrContentStream.REL_ORIGINAL, 1);
 
             // now verify the correct documents were indexed
             final SolrDocument doc1 = new SolrDocument();
-            doc1.addField("first", "mike");
-            doc1.addField("last", "jones");
-
-            final SolrDocument doc2 = new SolrDocument();
             doc1.addField("first", "bob");
             doc1.addField("last", "smith");
 
-            final Collection<SolrDocument> expectedDocuments = Collections.unmodifiableList(
-                    Arrays.asList(doc1, doc2));
-            verifySolrDocuments(proc.getSolrServer(), expectedDocuments);
+            verifySolrDocuments(proc.getSolrServer(), Collections.unmodifiableList(Arrays.asList(doc1)));
         } finally {
             try {
                 proc.getSolrServer().shutdown();
@@ -97,40 +89,49 @@ public class PutSolrContentStreamTest {
     }
 
     @Test
-    public void testSimpleJsonUpdate() throws IOException, SolrServerException {
+    public void testSimpleJsonUpdateWithMockSolrServer() throws IOException, SolrServerException {
         final NamedList<Object> response = new NamedList<>();
         response.add("status", 200);
 
         final MockSolrServerProcessor proc = new MockSolrServerProcessor(response);
 
         final TestRunner runner = createDefaultJsonTestRunner(proc);
-        runner.setProperty(PutSolrContentStream.MAX_ENTRIES, "2");
-        runner.setProperty(PutSolrContentStream.MAX_BIN_AGE, "5 seconds");
-
         runner.enqueue(TEST_JSON1.getBytes("UTF-8"));
         runner.enqueue(TEST_JSON1.getBytes("UTF-8"));
         runner.run();
 
-        runner.assertAllFlowFilesTransferred(PutSolrContentStream.REL_FAILURE, 0);
+        runner.assertTransferCount(PutSolrContentStream.REL_FAILURE, 0);
+        runner.assertTransferCount(PutSolrContentStream.REL_CONNECTION_FAILURE, 0);
+        runner.assertTransferCount(PutSolrContentStream.REL_ORIGINAL, 1);
+
         verify(proc.getSolrServer(), times(1)).request(any(SolrRequest.class));
 
         // TODO verify the correct request was produced
     }
 
     @Test
-    public void testSolrServerExceptionShouldRouteToFailure() throws IOException, SolrServerException {
-        final Throwable throwable = new SolrServerException("Error adding docs");
+    public void testSolrServerExceptionShouldRouteToConnectionFailure() throws IOException, SolrServerException {
+        final Throwable throwable = new SolrServerException("Error communicating with Solr");
         final ExceptionThrowingProcessor proc = new ExceptionThrowingProcessor(throwable);
 
         final TestRunner runner = createDefaultJsonTestRunner(proc);
-        runner.setProperty(PutSolrContentStream.MAX_ENTRIES, "2");
-        runner.setProperty(PutSolrContentStream.MAX_BIN_AGE, "5 seconds");
-
-        runner.enqueue(TEST_JSON1.getBytes("UTF-8"));
         runner.enqueue(TEST_JSON1.getBytes("UTF-8"));
         runner.run();
 
-        runner.assertAllFlowFilesTransferred(PutSolrContentStream.REL_FAILURE, 2);
+        runner.assertAllFlowFilesTransferred(PutSolrContentStream.REL_CONNECTION_FAILURE, 1);
+        verify(proc.getSolrServer(), times(1)).request(any(SolrRequest.class));
+    }
+
+    @Test
+    public void testSolrServerExceptionShouldRouteToFailure() throws IOException, SolrServerException {
+        final Throwable throwable = new SolrException(SolrException.ErrorCode.BAD_REQUEST, "Error");
+        final ExceptionThrowingProcessor proc = new ExceptionThrowingProcessor(throwable);
+
+        final TestRunner runner = createDefaultJsonTestRunner(proc);
+        runner.enqueue(TEST_JSON1.getBytes("UTF-8"));
+        runner.run();
+
+        runner.assertAllFlowFilesTransferred(PutSolrContentStream.REL_FAILURE, 1);
         verify(proc.getSolrServer(), times(1)).request(any(SolrRequest.class));
     }
 
@@ -162,13 +163,14 @@ public class PutSolrContentStreamTest {
 
         final TestRunner runner = createDefaultJsonTestRunner(proc);
         runner.setProperty(PutSolrContentStream.REQUEST_PARAMS, "a=1");
-        runner.setProperty(PutSolrContentStream.MAX_ENTRIES, "2");
-        runner.setProperty(PutSolrContentStream.MAX_BIN_AGE, "5 seconds");
 
         runner.enqueue(TEST_JSON1.getBytes("UTF-8"));
         runner.run();
 
-        runner.assertAllFlowFilesTransferred(PutSolrContentStream.REL_FAILURE, 0);
+        runner.assertTransferCount(PutSolrContentStream.REL_FAILURE, 0);
+        runner.assertTransferCount(PutSolrContentStream.REL_CONNECTION_FAILURE, 0);
+        runner.assertTransferCount(PutSolrContentStream.REL_ORIGINAL, 1);
+
         verify(proc.getSolrServer(), times(1)).request(any(SolrRequest.class));
     }
 
@@ -181,8 +183,6 @@ public class PutSolrContentStreamTest {
 
         final TestRunner runner = createDefaultJsonTestRunner(proc);
         runner.setProperty(PutSolrContentStream.REQUEST_PARAMS, "a=1&b");
-        runner.setProperty(PutSolrContentStream.MAX_ENTRIES, "2");
-        runner.setProperty(PutSolrContentStream.MAX_BIN_AGE, "5 seconds");
 
         runner.enqueue(TEST_JSON1.getBytes("UTF-8"));
         //runner.run();
@@ -218,9 +218,6 @@ public class PutSolrContentStreamTest {
             return mockSolrServer;
         }
 
-        public SolrServer getSolrServer() {
-            return mockSolrServer;
-        }
     }
 
     /**
@@ -248,9 +245,6 @@ public class PutSolrContentStreamTest {
             return mockSolrServer;
         }
 
-        public SolrServer getSolrServer() {
-            return mockSolrServer;
-        }
     }
 
     /**
@@ -282,23 +276,19 @@ public class PutSolrContentStreamTest {
             return embeddedSolrServer;
         }
 
-        public SolrServer getSolrServer() {
-            return embeddedSolrServer;
-        }
     }
 
     /**
      * Verify that given SolrServer contains the expected SolrDocuments.
      */
-    private static void verifySolrDocuments(SolrServer solrServer,
-            Collection<SolrDocument> expectedDocuments)
+    private static void verifySolrDocuments(SolrServer solrServer, Collection<SolrDocument> expectedDocuments)
             throws IOException, SolrServerException {
 
         solrServer.commit();
 
         SolrQuery query = new SolrQuery("*:*");
         QueryResponse qResponse = solrServer.query(query);
-        Assert.assertEquals(2, qResponse.getResults().getNumFound());
+        Assert.assertEquals(expectedDocuments.size(), qResponse.getResults().getNumFound());
 
         // verify documents have expected fields and values
         for (SolrDocument expectedDoc : expectedDocuments) {
