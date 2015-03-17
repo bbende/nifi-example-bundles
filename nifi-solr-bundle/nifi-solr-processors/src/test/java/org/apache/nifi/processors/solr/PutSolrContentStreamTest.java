@@ -31,10 +31,10 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 
 import static org.mockito.Mockito.*;
 
@@ -43,11 +43,30 @@ import static org.mockito.Mockito.*;
  */
 public class PutSolrContentStreamTest {
 
-    static final String TEST_JSON1 = "{\"first\":\"bob\",\"last\":\"smith\"}";
-    static final String TEST_JSON2 = "{\"first\":\"mike\",\"last\":\"jones\"}";
-
     static final String DEFAULT_SOLR_CORE = "testCollection";
-    static final String DEFAULT_JSON_REQUEST_PARAMS = "json.command=false&split=/&f=first:/first&f=last:/last";
+
+    static final String CUSTOM_JSON_SINGLE_DOC_FILE = "src/test/resources/testdata/test-custom-json-single-doc.json";
+    static final String SOLR_JSON_MULTIPLE_DOCS_FILE = "src/test/resources/testdata/test-solr-json-multiple-docs.json";
+
+    static final SolrDocument expectedDoc1 = new SolrDocument();
+    static {
+        expectedDoc1.addField("first", "John");
+        expectedDoc1.addField("last", "Doe");
+        expectedDoc1.addField("grade", 8);
+        expectedDoc1.addField("subject", "Math");
+        expectedDoc1.addField("test", "term1");
+        expectedDoc1.addField("marks", 90);
+    }
+
+    static final SolrDocument expectedDoc2 = new SolrDocument();
+    static {
+        expectedDoc2.addField("first", "John");
+        expectedDoc2.addField("last", "Doe");
+        expectedDoc2.addField("grade", 8);
+        expectedDoc2.addField("subject", "Biology");
+        expectedDoc2.addField("test", "term1");
+        expectedDoc2.addField("marks", 86);
+    }
 
     /**
      * Creates a base TestRunner with Solr Type of standard and json update path.
@@ -57,56 +76,57 @@ public class PutSolrContentStreamTest {
         runner.setProperty(PutSolrContentStream.SOLR_TYPE, PutSolrContentStream.SOLR_TYPE_STANDARD.getValue());
         runner.setProperty(PutSolrContentStream.SOLR_LOCATION, "http://localhost:8443/solr");
         runner.setProperty(PutSolrContentStream.CONTENT_STREAM_URL, "/update/json/docs");
-        runner.setProperty(PutSolrContentStream.REQUEST_PARAMS, DEFAULT_JSON_REQUEST_PARAMS);
         return runner;
     }
 
     @Test
-    public void testSimpleJsonUpdateWithEmbeddedSolrServer() throws IOException, SolrServerException {
+    public void testUpdateWithSolrJson() throws IOException, SolrServerException {
         final EmbeddedSolrServerProcessor proc = new EmbeddedSolrServerProcessor(DEFAULT_SOLR_CORE);
 
-        try {
-            final TestRunner runner = createDefaultJsonTestRunner(proc);
-            runner.enqueue(TEST_JSON1.getBytes("UTF-8"));
+        final TestRunner runner = createDefaultJsonTestRunner(proc);
+        runner.setProperty(PutSolrContentStream.CONTENT_STREAM_URL, "/update/json/docs");
+        runner.setProperty(PutSolrContentStream.REQUEST_PARAMS,"json.command=false");
 
-            // first run an verify there are no failures
+        try (FileInputStream fileIn = new FileInputStream(SOLR_JSON_MULTIPLE_DOCS_FILE)) {
+            runner.enqueue(fileIn);
+
             runner.run();
             runner.assertTransferCount(PutSolrContentStream.REL_FAILURE, 0);
             runner.assertTransferCount(PutSolrContentStream.REL_CONNECTION_FAILURE, 0);
             runner.assertTransferCount(PutSolrContentStream.REL_ORIGINAL, 1);
 
-            // now verify the correct documents were indexed
-            final SolrDocument doc1 = new SolrDocument();
-            doc1.addField("first", "bob");
-            doc1.addField("last", "smith");
-
-            verifySolrDocuments(proc.getSolrServer(), Collections.unmodifiableList(Arrays.asList(doc1)));
+            verifySolrDocuments(proc.getSolrServer(), Arrays.asList(expectedDoc1, expectedDoc2));
         } finally {
-            try {
-                proc.getSolrServer().shutdown();
-            } catch (Exception e) { }
+            try { proc.getSolrServer().shutdown(); } catch (Exception e) { }
         }
     }
 
     @Test
-    public void testSimpleJsonUpdateWithMockSolrServer() throws IOException, SolrServerException {
-        final NamedList<Object> response = new NamedList<>();
-        response.add("status", 200);
-
-        final MockSolrServerProcessor proc = new MockSolrServerProcessor(response);
+    public void testUpdateWithCustomJson() throws IOException, SolrServerException {
+        final EmbeddedSolrServerProcessor proc = new EmbeddedSolrServerProcessor(DEFAULT_SOLR_CORE);
 
         final TestRunner runner = createDefaultJsonTestRunner(proc);
-        runner.enqueue(TEST_JSON1.getBytes("UTF-8"));
-        runner.enqueue(TEST_JSON1.getBytes("UTF-8"));
-        runner.run();
+        runner.setProperty(PutSolrContentStream.REQUEST_PARAMS,
+                "split=/exams" +
+                "&f=first:/first" +
+                "&f=last:/last" +
+                "&f=grade:/grade" +
+                "&f=subject:/exams/subject" +
+                "&f=test:/exams/test" +
+                "&f=marks:/exams/marks");
 
-        runner.assertTransferCount(PutSolrContentStream.REL_FAILURE, 0);
-        runner.assertTransferCount(PutSolrContentStream.REL_CONNECTION_FAILURE, 0);
-        runner.assertTransferCount(PutSolrContentStream.REL_ORIGINAL, 1);
+        try (FileInputStream fileIn = new FileInputStream(CUSTOM_JSON_SINGLE_DOC_FILE)) {
+            runner.enqueue(fileIn);
 
-        verify(proc.getSolrServer(), times(1)).request(any(SolrRequest.class));
+            runner.run();
+            runner.assertTransferCount(PutSolrContentStream.REL_FAILURE, 0);
+            runner.assertTransferCount(PutSolrContentStream.REL_CONNECTION_FAILURE, 0);
+            runner.assertTransferCount(PutSolrContentStream.REL_ORIGINAL, 1);
 
-        // TODO verify the correct request was produced
+            verifySolrDocuments(proc.getSolrServer(), Arrays.asList(expectedDoc1, expectedDoc2));
+        } finally {
+            try { proc.getSolrServer().shutdown(); } catch (Exception e) { }
+        }
     }
 
     @Test
@@ -115,11 +135,14 @@ public class PutSolrContentStreamTest {
         final ExceptionThrowingProcessor proc = new ExceptionThrowingProcessor(throwable);
 
         final TestRunner runner = createDefaultJsonTestRunner(proc);
-        runner.enqueue(TEST_JSON1.getBytes("UTF-8"));
-        runner.run();
 
-        runner.assertAllFlowFilesTransferred(PutSolrContentStream.REL_CONNECTION_FAILURE, 1);
-        verify(proc.getSolrServer(), times(1)).request(any(SolrRequest.class));
+        try (FileInputStream fileIn = new FileInputStream(CUSTOM_JSON_SINGLE_DOC_FILE)) {
+            runner.enqueue(fileIn);
+            runner.run();
+
+            runner.assertAllFlowFilesTransferred(PutSolrContentStream.REL_CONNECTION_FAILURE, 1);
+            verify(proc.getSolrServer(), times(1)).request(any(SolrRequest.class));
+        }
     }
 
     @Test
@@ -128,11 +151,14 @@ public class PutSolrContentStreamTest {
         final ExceptionThrowingProcessor proc = new ExceptionThrowingProcessor(throwable);
 
         final TestRunner runner = createDefaultJsonTestRunner(proc);
-        runner.enqueue(TEST_JSON1.getBytes("UTF-8"));
-        runner.run();
 
-        runner.assertAllFlowFilesTransferred(PutSolrContentStream.REL_FAILURE, 1);
-        verify(proc.getSolrServer(), times(1)).request(any(SolrRequest.class));
+        try (FileInputStream fileIn = new FileInputStream(CUSTOM_JSON_SINGLE_DOC_FILE)) {
+            runner.enqueue(fileIn);
+            runner.run();
+
+            runner.assertAllFlowFilesTransferred(PutSolrContentStream.REL_FAILURE, 1);
+            verify(proc.getSolrServer(), times(1)).request(any(SolrRequest.class));
+        }
     }
 
     @Test
@@ -164,14 +190,16 @@ public class PutSolrContentStreamTest {
         final TestRunner runner = createDefaultJsonTestRunner(proc);
         runner.setProperty(PutSolrContentStream.REQUEST_PARAMS, "a=1");
 
-        runner.enqueue(TEST_JSON1.getBytes("UTF-8"));
-        runner.run();
+        try (FileInputStream fileIn = new FileInputStream(CUSTOM_JSON_SINGLE_DOC_FILE)) {
+            runner.enqueue(fileIn);
+            runner.run();
 
-        runner.assertTransferCount(PutSolrContentStream.REL_FAILURE, 0);
-        runner.assertTransferCount(PutSolrContentStream.REL_CONNECTION_FAILURE, 0);
-        runner.assertTransferCount(PutSolrContentStream.REL_ORIGINAL, 1);
+            runner.assertTransferCount(PutSolrContentStream.REL_FAILURE, 0);
+            runner.assertTransferCount(PutSolrContentStream.REL_CONNECTION_FAILURE, 0);
+            runner.assertTransferCount(PutSolrContentStream.REL_ORIGINAL, 1);
 
-        verify(proc.getSolrServer(), times(1)).request(any(SolrRequest.class));
+            verify(proc.getSolrServer(), times(1)).request(any(SolrRequest.class));
+        }
     }
 
     @Test
@@ -184,10 +212,12 @@ public class PutSolrContentStreamTest {
         final TestRunner runner = createDefaultJsonTestRunner(proc);
         runner.setProperty(PutSolrContentStream.REQUEST_PARAMS, "a=1&b");
 
-        runner.enqueue(TEST_JSON1.getBytes("UTF-8"));
-        //runner.run();
+        try (FileInputStream fileIn = new FileInputStream(CUSTOM_JSON_SINGLE_DOC_FILE)) {
+            runner.enqueue(fileIn);
+            //runner.run();
 
-        // TODO use a regex validator to check request params and update this test
+            // TODO use a regex validator to check request params and update this test
+        }
     }
 
 
@@ -306,7 +336,7 @@ public class PutSolrContentStreamTest {
                     break;
                 }
             }
-            Assert.assertTrue(found);
+            Assert.assertTrue("Could not find " + expectedDoc, found);
         }
     }
 
