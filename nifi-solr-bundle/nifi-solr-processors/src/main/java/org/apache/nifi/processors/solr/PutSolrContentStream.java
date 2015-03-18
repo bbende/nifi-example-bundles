@@ -20,6 +20,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.nifi.annotation.documentation.CapabilityDescription;
 import org.apache.nifi.annotation.documentation.Tags;
 import org.apache.nifi.components.PropertyDescriptor;
+import org.apache.nifi.components.ValidationContext;
+import org.apache.nifi.components.ValidationResult;
+import org.apache.nifi.components.Validator;
 import org.apache.nifi.flowfile.FlowFile;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.ProcessSession;
@@ -58,7 +61,7 @@ public class PutSolrContentStream extends SolrProcessor {
             .Builder().name("Request Parameters")
             .description("Additional parameters to pass to Solr on each request, i.e. key1=val1&key2=val2")
             .required(false)
-            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+            .addValidator(RequestParamsUtil.getValidator())
             .defaultValue("json.command=false&split=/&f=id:/field1")
             .build();
 
@@ -117,42 +120,8 @@ public class PutSolrContentStream extends SolrProcessor {
 
     @Override
     protected void additionalOnScheduled(ProcessContext context) {
-        this.requestParams = createRequestParams(context);
-    }
-
-    /**
-     * Parse the REQUEST_PARAMS property into a MultiMap.
-     *
-     * @param context
-     * @return
-     */
-    private MultiMapSolrParams createRequestParams(final ProcessContext context) {
-        final Map<String,String[]> paramsMap = new HashMap<>();
-
         final String requestParamsVal = context.getProperty(REQUEST_PARAMS).getValue();
-        if (requestParamsVal == null || requestParamsVal.trim().isEmpty()) {
-            return new MultiMapSolrParams(paramsMap);
-        }
-
-        final String[] params = requestParamsVal.split("[&]");
-        if (params == null || params.length == 0) {
-            throw new IllegalStateException(
-                    "Parameters must be in form k1=v1&k2=v2, was" + requestParamsVal);
-        }
-
-        for (final String param : params) {
-            final String[] keyVal = param.split("=");
-            if (keyVal.length != 2) {
-                throw new IllegalStateException(
-                        "Parameter must be in form key=value, was " + param);
-            }
-
-            final String key = keyVal[0].trim();
-            final String val = keyVal[1].trim();
-            MultiMapSolrParams.addParam(key, val, paramsMap);
-        }
-
-        return new MultiMapSolrParams(paramsMap);
+        this.requestParams = RequestParamsUtil.parse(requestParamsVal);
     }
 
     @Override
@@ -226,4 +195,11 @@ public class PutSolrContentStream extends SolrProcessor {
         }
     }
 
+    class RequestParamsValidator implements Validator {
+
+        @Override
+        public ValidationResult validate(String subject, String input, ValidationContext context) {
+            return null;
+        }
+    }
 }

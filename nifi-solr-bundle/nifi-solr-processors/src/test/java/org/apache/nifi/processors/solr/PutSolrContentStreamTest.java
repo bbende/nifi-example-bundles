@@ -181,73 +181,12 @@ public class PutSolrContentStreamTest {
     }
 
     @Test
-    public void testOnlyOneRequestParam() throws IOException, SolrServerException {
-        final NamedList<Object> response = new NamedList<>();
-        response.add("status", 200);
-
-        final MockSolrServerProcessor proc = new MockSolrServerProcessor(response);
-
-        final TestRunner runner = createDefaultJsonTestRunner(proc);
-        runner.setProperty(PutSolrContentStream.REQUEST_PARAMS, "a=1");
-
-        try (FileInputStream fileIn = new FileInputStream(CUSTOM_JSON_SINGLE_DOC_FILE)) {
-            runner.enqueue(fileIn);
-            runner.run();
-
-            runner.assertTransferCount(PutSolrContentStream.REL_FAILURE, 0);
-            runner.assertTransferCount(PutSolrContentStream.REL_CONNECTION_FAILURE, 0);
-            runner.assertTransferCount(PutSolrContentStream.REL_ORIGINAL, 1);
-
-            verify(proc.getSolrServer(), times(1)).request(any(SolrRequest.class));
-        }
-    }
-
-    @Test
-    public void testMalformedRequestParam() throws IOException, SolrServerException {
-        final NamedList<Object> response = new NamedList<>();
-        response.add("status", 200);
-
-        final MockSolrServerProcessor proc = new MockSolrServerProcessor(response);
-
-        final TestRunner runner = createDefaultJsonTestRunner(proc);
+    public void testRequestParamsShouldBeInvalid() {
+        final TestRunner runner = TestRunners.newTestRunner(PutSolrContentStream.class);
+        runner.setProperty(PutSolrContentStream.SOLR_TYPE, PutSolrContentStream.SOLR_TYPE_STANDARD.getValue());
+        runner.setProperty(PutSolrContentStream.SOLR_LOCATION, "http://localhost:8443/solr");
         runner.setProperty(PutSolrContentStream.REQUEST_PARAMS, "a=1&b");
-
-        try (FileInputStream fileIn = new FileInputStream(CUSTOM_JSON_SINGLE_DOC_FILE)) {
-            runner.enqueue(fileIn);
-            //runner.run();
-
-            // TODO use a regex validator to check request params and update this test
-        }
-    }
-
-
-    /**
-     * Override the creatrSolrServer method to inject a Mock.
-     */
-    private class MockSolrServerProcessor extends PutSolrContentStream {
-
-        private SolrServer mockSolrServer;
-        private NamedList<Object> response;
-
-        public MockSolrServerProcessor(NamedList<Object> response) {
-            this.response = response;
-        }
-
-        @Override
-        protected SolrServer createSolrServer(ProcessContext context) {
-            mockSolrServer = Mockito.mock(SolrServer.class);
-            if (response != null) {
-                try {
-                    when(mockSolrServer.request(any(SolrRequest.class))).thenReturn(response);
-                } catch (SolrServerException e) {
-                    Assert.fail(e.getMessage());
-                } catch (IOException e) {
-                    Assert.fail(e.getMessage());
-                }
-            }
-            return mockSolrServer;
-        }
-
+        runner.assertNotValid();
     }
 
     /**
