@@ -26,7 +26,6 @@ import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrException;
-import org.apache.solr.common.util.NamedList;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -47,6 +46,7 @@ public class PutSolrContentStreamTest {
 
     static final String CUSTOM_JSON_SINGLE_DOC_FILE = "src/test/resources/testdata/test-custom-json-single-doc.json";
     static final String SOLR_JSON_MULTIPLE_DOCS_FILE = "src/test/resources/testdata/test-solr-json-multiple-docs.json";
+    static final String CSV_MULTIPLE_DOCS_FILE = "src/test/resources/testdata/test-csv-multiple-docs.csv";
 
     static final SolrDocument expectedDoc1 = new SolrDocument();
     static {
@@ -71,11 +71,10 @@ public class PutSolrContentStreamTest {
     /**
      * Creates a base TestRunner with Solr Type of standard and json update path.
      */
-    private static TestRunner createDefaultJsonTestRunner(PutSolrContentStream processor) {
+    private static TestRunner createDefaultTestRunner(PutSolrContentStream processor) {
         TestRunner runner = TestRunners.newTestRunner(processor);
         runner.setProperty(PutSolrContentStream.SOLR_TYPE, PutSolrContentStream.SOLR_TYPE_STANDARD.getValue());
         runner.setProperty(PutSolrContentStream.SOLR_LOCATION, "http://localhost:8443/solr");
-        runner.setProperty(PutSolrContentStream.CONTENT_STREAM_URL, "/update/json/docs");
         return runner;
     }
 
@@ -83,7 +82,7 @@ public class PutSolrContentStreamTest {
     public void testUpdateWithSolrJson() throws IOException, SolrServerException {
         final EmbeddedSolrServerProcessor proc = new EmbeddedSolrServerProcessor(DEFAULT_SOLR_CORE);
 
-        final TestRunner runner = createDefaultJsonTestRunner(proc);
+        final TestRunner runner = createDefaultTestRunner(proc);
         runner.setProperty(PutSolrContentStream.CONTENT_STREAM_URL, "/update/json/docs");
         runner.setProperty(PutSolrContentStream.REQUEST_PARAMS,"json.command=false");
 
@@ -105,7 +104,8 @@ public class PutSolrContentStreamTest {
     public void testUpdateWithCustomJson() throws IOException, SolrServerException {
         final EmbeddedSolrServerProcessor proc = new EmbeddedSolrServerProcessor(DEFAULT_SOLR_CORE);
 
-        final TestRunner runner = createDefaultJsonTestRunner(proc);
+        final TestRunner runner = createDefaultTestRunner(proc);
+        runner.setProperty(PutSolrContentStream.CONTENT_STREAM_URL, "/update/json/docs");
         runner.setProperty(PutSolrContentStream.REQUEST_PARAMS,
                 "split=/exams" +
                 "&f=first:/first" +
@@ -130,11 +130,34 @@ public class PutSolrContentStreamTest {
     }
 
     @Test
+    public void testUpdateWithCsv() throws IOException, SolrServerException {
+        final EmbeddedSolrServerProcessor proc = new EmbeddedSolrServerProcessor(DEFAULT_SOLR_CORE);
+
+        final TestRunner runner = createDefaultTestRunner(proc);
+        runner.setProperty(PutSolrContentStream.CONTENT_STREAM_URL, "/update/csv");
+        runner.setProperty(PutSolrContentStream.REQUEST_PARAMS,
+                "fieldnames=first,last,grade,subject,test,marks");
+
+        try (FileInputStream fileIn = new FileInputStream(CSV_MULTIPLE_DOCS_FILE)) {
+            runner.enqueue(fileIn);
+
+            runner.run();
+            runner.assertTransferCount(PutSolrContentStream.REL_FAILURE, 0);
+            runner.assertTransferCount(PutSolrContentStream.REL_CONNECTION_FAILURE, 0);
+            runner.assertTransferCount(PutSolrContentStream.REL_ORIGINAL, 1);
+
+            verifySolrDocuments(proc.getSolrServer(), Arrays.asList(expectedDoc1, expectedDoc2));
+        } finally {
+            try { proc.getSolrServer().shutdown(); } catch (Exception e) { }
+        }
+    }
+
+    @Test
     public void testSolrServerExceptionShouldRouteToConnectionFailure() throws IOException, SolrServerException {
         final Throwable throwable = new SolrServerException("Error communicating with Solr");
         final ExceptionThrowingProcessor proc = new ExceptionThrowingProcessor(throwable);
 
-        final TestRunner runner = createDefaultJsonTestRunner(proc);
+        final TestRunner runner = createDefaultTestRunner(proc);
 
         try (FileInputStream fileIn = new FileInputStream(CUSTOM_JSON_SINGLE_DOC_FILE)) {
             runner.enqueue(fileIn);
@@ -150,7 +173,7 @@ public class PutSolrContentStreamTest {
         final Throwable throwable = new SolrException(SolrException.ErrorCode.BAD_REQUEST, "Error");
         final ExceptionThrowingProcessor proc = new ExceptionThrowingProcessor(throwable);
 
-        final TestRunner runner = createDefaultJsonTestRunner(proc);
+        final TestRunner runner = createDefaultTestRunner(proc);
 
         try (FileInputStream fileIn = new FileInputStream(CUSTOM_JSON_SINGLE_DOC_FILE)) {
             runner.enqueue(fileIn);
