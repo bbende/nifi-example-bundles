@@ -14,7 +14,7 @@
     <packaging>pom</packaging>
 
     <properties>
-        <nifiVersion>0.0.2-incubating-SNAPSHOT</nifiVersion>
+        <nifiVersion>0.1.0-incubating-SNAPSHOT</nifiVersion>
     </properties>
 
     <modules>
