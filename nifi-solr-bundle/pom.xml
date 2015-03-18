@@ -27,6 +27,10 @@
     <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
+    <properties>
+        <solr.version>5.0.0</solr.version>
+    </properties>
+
     <modules>
         <module>nifi-solr-processors</module>
         <module>nifi-solr-nar</module>

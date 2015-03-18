@@ -26,9 +26,9 @@ import org.apache.nifi.components.ValidationResult;
 import org.apache.nifi.processor.AbstractProcessor;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.processor.util.StandardValidators;
-import org.apache.solr.client.solrj.SolrServer;
-import org.apache.solr.client.solrj.impl.CloudSolrServer;
-import org.apache.solr.client.solrj.impl.HttpSolrServer;
+import org.apache.solr.client.solrj.SolrClient;
+import org.apache.solr.client.solrj.impl.CloudSolrClient;
+import org.apache.solr.client.solrj.impl.HttpSolrClient;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -71,7 +71,7 @@ public abstract class SolrProcessor extends AbstractProcessor {
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .build();
 
-    private volatile SolrServer solrServer;
+    private volatile SolrClient solrServer;
 
     @OnScheduled
     public final void onScheduled(final ProcessContext context) throws IOException {
@@ -86,11 +86,11 @@ public abstract class SolrProcessor extends AbstractProcessor {
      *          The context
      * @return an HttpSolrServer or CloudSolrServer
      */
-    protected SolrServer createSolrServer(final ProcessContext context) {
+    protected SolrClient createSolrServer(final ProcessContext context) {
         if (SOLR_TYPE_STANDARD.equals(context.getProperty(SOLR_TYPE).getValue())) {
-            return new HttpSolrServer(context.getProperty(SOLR_LOCATION).getValue());
+            return new HttpSolrClient(context.getProperty(SOLR_LOCATION).getValue());
         } else {
-            CloudSolrServer cloudSolrServer = new CloudSolrServer(
+            CloudSolrClient cloudSolrServer = new CloudSolrClient(
                     context.getProperty(SOLR_LOCATION).getValue());
             cloudSolrServer.setDefaultCollection(
                     context.getProperty(DEFAULT_COLLECTION).getValue());
@@ -99,12 +99,12 @@ public abstract class SolrProcessor extends AbstractProcessor {
     }
 
     /**
-     * Returns the {@link SolrServer} that was created by the
+     * Returns the {@link org.apache.solr.client.solrj.SolrClient} that was created by the
      * {@link #createSolrServer(org.apache.nifi.processor.ProcessContext)} method
      *
      * @return
      */
-    protected final SolrServer getSolrServer() {
+    protected final SolrClient getSolrServer() {
         return solrServer;
     }
 

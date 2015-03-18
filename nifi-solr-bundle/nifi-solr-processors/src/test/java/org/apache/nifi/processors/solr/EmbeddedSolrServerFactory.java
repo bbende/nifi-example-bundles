@@ -19,11 +19,10 @@
 package org.apache.nifi.processors.solr;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.solr.client.solrj.SolrServer;
+import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.embedded.EmbeddedSolrServer;
 import org.apache.solr.core.CoreContainer;
 import org.apache.solr.core.CoreDescriptor;
-import org.apache.solr.core.SolrCore;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,7 +43,7 @@ public class EmbeddedSolrServerFactory {
      * @param coreName
      * @return
      */
-    public static SolrServer create(String coreName) throws IOException {
+    public static SolrClient create(String coreName) throws IOException {
         return create(DEFAULT_SOLR_HOME, DEFAULT_CORE_HOME,
                 coreName, DEFAULT_DATA_DIR);
     }
@@ -60,7 +59,7 @@ public class EmbeddedSolrServerFactory {
      *
      * @return an EmbeddedSolrServer for the given core
      */
-    public static SolrServer create(String solrHome, String coreHome, String coreName, String dataDir)
+    public static SolrClient create(String solrHome, String coreHome, String coreName, String dataDir)
             throws IOException {
 
         Properties props = new Properties();

@@ -19,10 +19,7 @@ package org.apache.nifi.processors.solr;
 import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.util.TestRunner;
 import org.apache.nifi.util.TestRunners;
-import org.apache.solr.client.solrj.SolrQuery;
-import org.apache.solr.client.solrj.SolrRequest;
-import org.apache.solr.client.solrj.SolrServer;
-import org.apache.solr.client.solrj.SolrServerException;
+import org.apache.solr.client.solrj.*;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrException;
@@ -240,7 +237,7 @@ public class PutSolrContentStreamTest {
      */
     private class ExceptionThrowingProcessor extends PutSolrContentStream {
 
-        private SolrServer mockSolrServer;
+        private SolrClient mockSolrServer;
         private Throwable throwable;
 
         public ExceptionThrowingProcessor(Throwable throwable) {
@@ -248,8 +245,8 @@ public class PutSolrContentStreamTest {
         }
 
         @Override
-        protected SolrServer createSolrServer(ProcessContext context) {
-            mockSolrServer = Mockito.mock(SolrServer.class);
+        protected SolrClient createSolrServer(ProcessContext context) {
+            mockSolrServer = Mockito.mock(SolrClient.class);
             try {
                 when(mockSolrServer.request(any(SolrRequest.class))).thenThrow(throwable);
             } catch (SolrServerException e) {
@@ -268,14 +265,14 @@ public class PutSolrContentStreamTest {
     private class EmbeddedSolrServerProcessor extends PutSolrContentStream {
 
         private String coreName;
-        private SolrServer embeddedSolrServer;
+        private SolrClient embeddedSolrServer;
 
         public EmbeddedSolrServerProcessor(String coreName) {
             this.coreName = coreName;
         }
 
         @Override
-        protected SolrServer createSolrServer(ProcessContext context) {
+        protected SolrClient createSolrServer(ProcessContext context) {
             try {
                 String relPath = getClass().getProtectionDomain()
                         .getCodeSource().getLocation().getFile()
@@ -296,7 +293,7 @@ public class PutSolrContentStreamTest {
     /**
      * Verify that given SolrServer contains the expected SolrDocuments.
      */
-    private static void verifySolrDocuments(SolrServer solrServer, Collection<SolrDocument> expectedDocuments)
+    private static void verifySolrDocuments(SolrClient solrServer, Collection<SolrDocument> expectedDocuments)
             throws IOException, SolrServerException {
 
         solrServer.commit();
