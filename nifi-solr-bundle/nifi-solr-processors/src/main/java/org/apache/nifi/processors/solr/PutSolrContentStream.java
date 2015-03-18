@@ -31,6 +31,7 @@ import org.apache.nifi.processor.exception.ProcessException;
 import org.apache.nifi.processor.io.InputStreamCallback;
 import org.apache.nifi.processor.util.StandardValidators;
 import org.apache.nifi.util.ObjectHolder;
+import org.apache.nifi.util.StopWatch;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.request.ContentStreamUpdateRequest;
 import org.apache.solr.client.solrj.response.UpdateResponse;
@@ -43,6 +44,7 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 @Tags({"Apache", "Solr", "Put", "Send"})
 @CapabilityDescription("Sends the contents of a FlowFile as a ContentStream to Solr")
@@ -134,7 +136,7 @@ public class PutSolrContentStream extends SolrProcessor {
 
     @Override
     public void onTrigger(final ProcessContext context, final ProcessSession session) throws ProcessException {
-        final FlowFile flowFile = session.get();
+        FlowFile flowFile = session.get();
         if ( flowFile == null ) {
             return;
         }
@@ -142,6 +144,9 @@ public class PutSolrContentStream extends SolrProcessor {
         final ObjectHolder<Throwable> error = new ObjectHolder<>(null);
         final ObjectHolder<Throwable> connectionError = new ObjectHolder<>(null);
 
+        final String collectionAttrVal = flowFile.getAttribute(SOLR_COLLECTION_ATTR);
+
+        StopWatch timer = new StopWatch(true);
         session.read(flowFile, new InputStreamCallback() {
             @Override
             public void process(final InputStream in) throws IOException {
@@ -160,7 +165,7 @@ public class PutSolrContentStream extends SolrProcessor {
 
                 // send the request to the specified collection, or to the default collection
                 if (SOLR_TYPE_CLOUD.equals(context.getProperty(SOLR_TYPE).getValue())) {
-                    String collection = flowFile.getAttribute(SOLR_COLLECTION_ATTR);
+                    String collection = collectionAttrVal;
                     if (StringUtils.isBlank(collection)) {
                         collection = context.getProperty(DEFAULT_COLLECTION).getValue();
                     }
@@ -182,28 +187,34 @@ public class PutSolrContentStream extends SolrProcessor {
                     });
 
                     UpdateResponse response = request.process(getSolrServer());
-                    session.getProvenanceReporter().send(flowFile, "solr://"
-                            + context.getProperty(SOLR_LOCATION).getValue());
-                    getLogger().info("Successfully sent {} to Solr in {} millis", new Object[]{
-                            flowFile, response.getElapsedTime()});
+                    getLogger().debug("Got {} response from Solr", new Object[]{response.getStatus()});
+
                 } catch (SolrException | IOException e) {
                     error.set(e);
-                    getLogger().error("Failed to send {} to Solr due to {}; routing to failure",
-                            new Object[]{flowFile, e});
                 } catch (SolrServerException e) {
                     connectionError.set(e);
-                    getLogger().error("Failed to send {} to Solr due to {}; routing to connection_failure",
-                            new Object[] {flowFile, e});
                 }
             }
         });
+        timer.stop();
 
         if (error.get() != null) {
+            getLogger().error("Failed to send {} to Solr due to {}; routing to failure",
+                    new Object[]{flowFile, error.get()});
             session.transfer(flowFile, REL_FAILURE);
         } else if (connectionError.get() != null) {
-            session.penalize(flowFile);
+            getLogger().error("Failed to send {} to Solr due to {}; routing to connection_failure",
+                    new Object[] {flowFile, connectionError.get()});
+            flowFile = session.penalize(flowFile);
             session.transfer(flowFile, REL_CONNECTION_FAILURE);
         } else {
+            final long duration = timer.getDuration(TimeUnit.MILLISECONDS);
+            session.getProvenanceReporter().send(flowFile, "solr://"
+                    + context.getProperty(SOLR_LOCATION).getValue(),
+                    duration, true);
+
+            getLogger().info("Successfully sent {} to Solr in {} millis",
+                    new Object[]{flowFile, duration});
             session.transfer(flowFile, REL_ORIGINAL);
         }
     }
