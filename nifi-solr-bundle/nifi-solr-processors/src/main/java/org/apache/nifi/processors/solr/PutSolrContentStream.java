@@ -57,6 +57,14 @@ public class PutSolrContentStream extends SolrProcessor {
             .defaultValue("/update/json/docs")
             .build();
 
+    public static final PropertyDescriptor CONTENT_TYPE = new PropertyDescriptor
+            .Builder().name("Content-Type")
+            .description("The Content-Type of the ContentStream being sent to Solr")
+            .required(true)
+            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+            .defaultValue("application/json")
+            .build();
+
     public static final PropertyDescriptor REQUEST_PARAMS = new PropertyDescriptor
             .Builder().name("Request Parameters")
             .description("Additional parameters to pass to Solr on each request, i.e. key1=val1&key2=val2")
@@ -98,6 +106,7 @@ public class PutSolrContentStream extends SolrProcessor {
         descriptors.add(SOLR_LOCATION);
         descriptors.add(DEFAULT_COLLECTION);
         descriptors.add(CONTENT_STREAM_URL);
+        descriptors.add(CONTENT_TYPE);
         descriptors.add(REQUEST_PARAMS);
         this.descriptors = Collections.unmodifiableList(descriptors);
 
@@ -166,6 +175,11 @@ public class PutSolrContentStream extends SolrProcessor {
                         public InputStream getStream() throws IOException {
                             return bufferedIn;
                         }
+
+                        @Override
+                        public String getContentType() {
+                            return context.getProperty(CONTENT_TYPE).getValue();
+                        }
                     });
 
                     UpdateResponse response = request.process(getSolrServer());
@@ -195,11 +209,4 @@ public class PutSolrContentStream extends SolrProcessor {
         }
     }
 
-    class RequestParamsValidator implements Validator {
-
-        @Override
-        public ValidationResult validate(String subject, String input, ValidationContext context) {
-            return null;
-        }
-    }
 }

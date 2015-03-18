@@ -47,6 +47,7 @@ public class PutSolrContentStreamTest {
     static final String CUSTOM_JSON_SINGLE_DOC_FILE = "src/test/resources/testdata/test-custom-json-single-doc.json";
     static final String SOLR_JSON_MULTIPLE_DOCS_FILE = "src/test/resources/testdata/test-solr-json-multiple-docs.json";
     static final String CSV_MULTIPLE_DOCS_FILE = "src/test/resources/testdata/test-csv-multiple-docs.csv";
+    static final String XML_MULTIPLE_DOCS_FILE = "src/test/resources/testdata/test-xml-multiple-docs.xml";
 
     static final SolrDocument expectedDoc1 = new SolrDocument();
     static {
@@ -139,6 +140,28 @@ public class PutSolrContentStreamTest {
                 "fieldnames=first,last,grade,subject,test,marks");
 
         try (FileInputStream fileIn = new FileInputStream(CSV_MULTIPLE_DOCS_FILE)) {
+            runner.enqueue(fileIn);
+
+            runner.run();
+            runner.assertTransferCount(PutSolrContentStream.REL_FAILURE, 0);
+            runner.assertTransferCount(PutSolrContentStream.REL_CONNECTION_FAILURE, 0);
+            runner.assertTransferCount(PutSolrContentStream.REL_ORIGINAL, 1);
+
+            verifySolrDocuments(proc.getSolrServer(), Arrays.asList(expectedDoc1, expectedDoc2));
+        } finally {
+            try { proc.getSolrServer().shutdown(); } catch (Exception e) { }
+        }
+    }
+
+    @Test
+    public void testUpdateWithXml() throws IOException, SolrServerException {
+        final EmbeddedSolrServerProcessor proc = new EmbeddedSolrServerProcessor(DEFAULT_SOLR_CORE);
+
+        final TestRunner runner = createDefaultTestRunner(proc);
+        runner.setProperty(PutSolrContentStream.CONTENT_STREAM_URL, "/update");
+        runner.setProperty(PutSolrContentStream.CONTENT_TYPE, "application/xml");
+
+        try (FileInputStream fileIn = new FileInputStream(XML_MULTIPLE_DOCS_FILE)) {
             runner.enqueue(fileIn);
 
             runner.run();
