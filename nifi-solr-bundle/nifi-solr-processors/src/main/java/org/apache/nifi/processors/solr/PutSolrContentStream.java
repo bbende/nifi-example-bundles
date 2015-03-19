@@ -189,8 +189,9 @@ public class PutSolrContentStream extends SolrProcessor {
                     UpdateResponse response = request.process(getSolrServer());
                     getLogger().debug("Got {} response from Solr", new Object[]{response.getStatus()});
 
-                } catch (SolrException | IOException e) {
+                } catch (SolrException e) {
                     error.set(e);
+                    getLogger().error("SolrException status code was {}", new Object[]{e.code()});
                 } catch (SolrServerException e) {
                     connectionError.set(e);
                 }

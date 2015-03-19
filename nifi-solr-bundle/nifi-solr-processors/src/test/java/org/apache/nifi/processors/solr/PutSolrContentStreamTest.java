@@ -20,6 +20,7 @@ import org.apache.nifi.processor.ProcessContext;
 import org.apache.nifi.util.TestRunner;
 import org.apache.nifi.util.TestRunners;
 import org.apache.solr.client.solrj.*;
+import org.apache.solr.client.solrj.impl.HttpSolrClient;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrException;
@@ -189,7 +190,7 @@ public class PutSolrContentStreamTest {
     }
 
     @Test
-    public void testSolrServerExceptionShouldRouteToFailure() throws IOException, SolrServerException {
+    public void testSolrExceptionShouldRouteToFailure() throws IOException, SolrServerException {
         final Throwable throwable = new SolrException(SolrException.ErrorCode.BAD_REQUEST, "Error");
         final ExceptionThrowingProcessor proc = new ExceptionThrowingProcessor(throwable);
 
@@ -203,6 +204,24 @@ public class PutSolrContentStreamTest {
             verify(proc.getSolrServer(), times(1)).request(any(SolrRequest.class));
         }
     }
+
+    @Test
+    public void testRemoteSolrExceptionShouldRouteToFailure() throws IOException, SolrServerException {
+        final Throwable throwable = new HttpSolrClient.RemoteSolrException(
+                "host", 401, "error", new NumberFormatException());
+        final ExceptionThrowingProcessor proc = new ExceptionThrowingProcessor(throwable);
+
+        final TestRunner runner = createDefaultTestRunner(proc);
+
+        try (FileInputStream fileIn = new FileInputStream(CUSTOM_JSON_SINGLE_DOC_FILE)) {
+            runner.enqueue(fileIn);
+            runner.run();
+
+            runner.assertAllFlowFilesTransferred(PutSolrContentStream.REL_FAILURE, 1);
+            verify(proc.getSolrServer(), times(1)).request(any(SolrRequest.class));
+        }
+    }
+
 
     @Test
     public void testSolrTypeCloudShouldRequireCollection() {
