@@ -37,7 +37,7 @@ import java.util.*;
 
 import static org.junit.Assert.assertTrue;
 
-public class GetSolrTest {
+public class TestGetSolr {
 
     static final String DEFAULT_SOLR_CORE = "testCollection";
 

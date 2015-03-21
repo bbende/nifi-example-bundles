@@ -38,7 +38,7 @@ import static org.mockito.Mockito.*;
 /**
  * Test for PutSolr processor.
  */
-public class PutSolrContentStreamTest {
+public class TestPutSolrContentStream {
 
     static final String DEFAULT_SOLR_CORE = "testCollection";
 
