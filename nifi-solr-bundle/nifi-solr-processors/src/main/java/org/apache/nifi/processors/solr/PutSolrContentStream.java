@@ -52,7 +52,7 @@ public class PutSolrContentStream extends SolrProcessor {
 
     public static final PropertyDescriptor CONTENT_STREAM_URL = new PropertyDescriptor
             .Builder().name("Content Stream URL")
-            .description("The URL to post the ContentStream to in Solr")
+            .description("The URL in Solr to post the ContentStream")
             .required(true)
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .defaultValue("/update/json/docs")
@@ -60,7 +60,7 @@ public class PutSolrContentStream extends SolrProcessor {
 
     public static final PropertyDescriptor CONTENT_TYPE = new PropertyDescriptor
             .Builder().name("Content-Type")
-            .description("The Content-Type of the ContentStream being sent to Solr")
+            .description("Content-Type being sent to Solr")
             .required(true)
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .defaultValue("application/json")

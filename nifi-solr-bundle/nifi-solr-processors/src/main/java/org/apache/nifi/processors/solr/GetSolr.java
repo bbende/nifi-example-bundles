@@ -38,7 +38,6 @@ import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.client.solrj.util.ClientUtils;
 import org.apache.solr.common.SolrDocument;
-import org.apache.solr.common.SolrException;
 
 import java.io.*;
 import java.text.SimpleDateFormat;
@@ -75,7 +74,7 @@ public class GetSolr extends SolrProcessor {
 
     public static final PropertyDescriptor DATE_FIELD = new PropertyDescriptor
             .Builder().name("Date Field")
-            .description("The name of a date field in Solr")
+            .description("The name of a date field in Solr used to filter results")
             .required(true)
             .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
             .build();

@@ -45,18 +45,21 @@ public class TestGetSolr {
 
     @Before
     public void setup() {
+        // create the conf dir if it doesn't exist
         File confDir = new File("conf");
         if (!confDir.exists()) {
             confDir.mkdir();
         }
 
         try {
+            // create an EmbeddedSolrServer for the processor to use
             String relPath = getClass().getProtectionDomain().getCodeSource()
                     .getLocation().getFile() + "../../target";
 
             solrClient = EmbeddedSolrServerFactory.create(EmbeddedSolrServerFactory.DEFAULT_SOLR_HOME,
                     EmbeddedSolrServerFactory.DEFAULT_CORE_HOME, DEFAULT_SOLR_CORE, relPath);
 
+            // create some test documents
             SolrInputDocument doc1 = new SolrInputDocument();
             doc1.addField("first", "bob");
             doc1.addField("last", "smith");
@@ -82,6 +85,7 @@ public class TestGetSolr {
             doc5.addField("last", "smith");
             doc5.addField("created", new Date());
 
+            // add the test data to the index
             solrClient.add(doc1);
             solrClient.add(doc2);
             solrClient.add(doc3);
