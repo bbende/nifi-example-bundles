@@ -18,8 +18,6 @@
     </properties>
 
     <modules>
-        <module>nifi-twitter-bundle</module>
-        <module>nifi-solr-bundle</module>
         <module>nifi-example-utils-bundle</module>
     </modules>
 
